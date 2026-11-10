@@ -5,3 +5,5 @@ node_modules/
 *.log
 playwright-report/
 test-results/
+capture/node_modules/
+capture/out/
