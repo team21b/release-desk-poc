@@ -26,6 +26,11 @@ export async function appInstallation() {
   return (await fetch(`${API}/repos/${OWNER}/${REPO}/installation`, { headers: { ...baseHeaders, Authorization: `Bearer ${appJwt()}` } })).json();
 }
 
+// What the app itself asks for (may be ahead of what the installation has accepted).
+export async function appInfo() {
+  return (await fetch(`${API}/app`, { headers: { ...baseHeaders, Authorization: `Bearer ${appJwt()}` } })).json();
+}
+
 let cached;
 async function installationToken() {
   if (cached && cached.exp > Date.now() + 60_000) return cached.token;
