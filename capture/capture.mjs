@@ -5,15 +5,17 @@ import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, renameSync } from 'node:fs';
 
-const [alias, name, path = '/lightning/app/standard__LightningSalesConsole'] = process.argv.slice(2);
+const [alias, name, path = '/lightning/page/home', app = 'standard__LightningSalesConsole'] = process.argv.slice(2);
 mkdirSync('out', { recursive: true });
-const { result } = JSON.parse(execFileSync('sf', ['org', 'open', '-o', alias, '--url-only', '--path', path, '--json'], { encoding: 'utf8' }));
+const { result } = JSON.parse(execFileSync('sf', ['org', 'open', '-o', alias, '--url-only', '--path', `/lightning/app/${app}`, '--json'], { encoding: 'utf8' }));
 
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, recordVideo: { dir: 'out/video-tmp', size: { width: 1440, height: 900 } } });
 const page = await context.newPage();
 await page.goto(result.url, { waitUntil: 'domcontentloaded', timeout: 90_000 });
 await page.waitForURL(/lightning\//, { timeout: 90_000 });
+await page.waitForTimeout(5000); // let the app load and become the current app
+await page.goto(new URL(path, page.url()).toString(), { waitUntil: 'domcontentloaded' });
 await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
 await page.locator('.slds-global-header, .appName, one-appnav').first().waitFor({ state: 'attached', timeout: 60_000 });
 await page.waitForTimeout(8000); // let console tabs + home components settle

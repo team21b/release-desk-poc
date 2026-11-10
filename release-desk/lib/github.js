@@ -61,3 +61,13 @@ export async function findMarker(pr) {
 }
 
 export const markerBody = (text, data) => `${text}\n\n<!-- release-desk:${JSON.stringify(data)} -->`;
+
+// Raw file bytes from a branch (used for review screenshots on the release-desk-assets branch).
+export async function ghRaw(path, ref) {
+  const token = await installationToken();
+  const res = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${path}?ref=${encodeURIComponent(ref)}`, {
+    headers: { ...baseHeaders, Accept: 'application/vnd.github.raw', Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return Buffer.from(await res.arrayBuffer());
+}

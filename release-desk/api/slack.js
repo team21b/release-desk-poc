@@ -1,42 +1,6 @@
-// Slack interactivity endpoint: Approve & ship / Request changes.
-import { gh, findMarker } from '../lib/github.js';
+// Slack interactivity endpoint: card buttons (Approve & ship / Request changes) and the change-request modal.
 import { slack, verifySlack, respond, isApprover, approverMentions } from '../lib/slack.js';
-import { buildCard } from '../lib/card.js';
-
-async function refresh(channel, ts, pr, state, prefix) {
-  const { blocks, text } = await buildCard(pr, state);
-  await slack('chat.update', {
-    channel, ts, text,
-    blocks: prefix ? [{ type: 'section', text: { type: 'mrkdwn', text: prefix } }, ...blocks] : blocks,
-  });
-}
-
-async function thread(channel, ts, text) {
-  await slack('chat.postMessage', { channel, thread_ts: ts, text });
-}
-
-async function approve({ pr, sha, channel, ts, user }) {
-  const live = await gh(`/pulls/${pr}`);
-  if (live.state !== 'open') return thread(channel, ts, `This PR is already ${live.merged ? 'merged' : 'closed'} — nothing to do.`);
-  if (live.head.sha !== sha) {
-    return thread(channel, ts, `⚠️ Not shipped: new commits landed after this card was sent. The card will refresh once the sandbox deploy finishes — please review the latest version.`);
-  }
-  try {
-    await gh(`/pulls/${pr}/merge`, {
-      method: 'PUT',
-      body: { sha, merge_method: 'squash', commit_title: `${live.title} (#${pr})`, commit_message: `Approved in Slack by ${user.name} (${user.id}) via Release Desk.` },
-    });
-  } catch (e) {
-    return thread(channel, ts, `❌ Couldn't merge: ${e.message}`);
-  }
-  const files = await gh(`/pulls/${pr}/files?per_page=100`);
-  const deploys = files.some((f) => f.filename.startsWith('force-app/') || f.filename === 'sfdx-project.json');
-  await gh(`/issues/${pr}/comments`, { method: 'POST', body: { body: `✅ Approved in Slack by **${user.name}** — merged${deploys ? '; production deploy starting' : ' (no Salesforce changes)'}.` } });
-  await refresh(channel, ts, pr, { status: deploys ? 'approved' : 'merged', by: user.id });
-  await thread(channel, ts, deploys
-    ? `✅ Approved by <@${user.id}>. Merged and deploying to production — I'll post here when it's live.`
-    : `✅ Approved by <@${user.id}>. Merged — no Salesforce changes, so nothing goes to production.`);
-}
+import { act } from '../lib/actions.js';
 
 const changesModal = (meta) => ({
   type: 'modal',
@@ -67,7 +31,7 @@ export async function POST(request) {
     const { pr, sha } = JSON.parse(action.value);
     const channel = payload.container.channel_id;
     const ts = payload.container.message_ts;
-    if (action.action_id === 'approve') await approve({ pr, sha, channel, ts, user: payload.user });
+    if (action.action_id === 'approve') await act({ action: 'approve', pr, sha, user: payload.user, channel, ts, via: 'card' });
     else await slack('views.open', { trigger_id: payload.trigger_id, view: changesModal({ pr, channel, ts }) });
     return new Response('');
   }
@@ -75,10 +39,7 @@ export async function POST(request) {
   if (payload.type === 'view_submission' && payload.view.callback_id === 'request_changes') {
     if (!isApprover(payload.user.id)) return new Response('');
     const { pr, channel, ts } = JSON.parse(payload.view.private_metadata);
-    const note = payload.view.state.values.note.note.value;
-    await gh(`/issues/${pr}/comments`, { method: 'POST', body: { body: `🔁 **Changes requested in Slack by ${payload.user.name}:**\n\n> ${note.replace(/\n/g, '\n> ')}` } });
-    await refresh(channel, ts, pr, { status: 'changes', by: payload.user.id, note });
-    await thread(channel, ts, `🔁 <@${payload.user.id}> sent this back:\n>${note.replace(/\n/g, '\n>')}`);
+    await act({ action: 'request_changes', pr, user: payload.user, note: payload.view.state.values.note.note.value, channel, ts, via: 'card' });
     return new Response('');
   }
   return new Response('');
