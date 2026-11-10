@@ -29,3 +29,8 @@ export function bearerOk(request) {
   const got = (request.headers.get('authorization') || '').replace(/^Bearer /, '');
   return !!want && got.length === want.length && crypto.timingSafeEqual(Buffer.from(got), Buffer.from(want));
 }
+
+// APPROVER_SLACK_ID may hold one ID or a comma-separated list.
+export const approvers = () => (process.env.APPROVER_SLACK_ID || '').split(',').map((s) => s.trim()).filter(Boolean);
+export const isApprover = (id) => approvers().includes(id);
+export const approverMentions = () => approvers().map((id) => `<@${id}>`).join(' or ');

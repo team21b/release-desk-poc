@@ -1,9 +1,7 @@
 // Slack interactivity endpoint: Approve & ship / Request changes.
 import { gh, findMarker } from '../lib/github.js';
-import { slack, verifySlack, respond } from '../lib/slack.js';
+import { slack, verifySlack, respond, isApprover, approverMentions } from '../lib/slack.js';
 import { buildCard } from '../lib/card.js';
-
-const approver = () => process.env.APPROVER_SLACK_ID;
 
 async function refresh(channel, ts, pr, state, prefix) {
   const { blocks, text } = await buildCard(pr, state);
@@ -58,8 +56,8 @@ export async function POST(request) {
   if (payload.type === 'block_actions') {
     const action = payload.actions[0];
     if (!['approve', 'request_changes'].includes(action.action_id)) return new Response('');
-    if (payload.user.id !== approver()) {
-      await respond(payload.response_url, { response_type: 'ephemeral', replace_original: false, text: `Only <@${approver()}> can approve or send back changes.` });
+    if (!isApprover(payload.user.id)) {
+      await respond(payload.response_url, { response_type: 'ephemeral', replace_original: false, text: `Only ${approverMentions()} can approve or send back changes.` });
       return new Response('');
     }
     const { pr, sha } = JSON.parse(action.value);
@@ -71,7 +69,7 @@ export async function POST(request) {
   }
 
   if (payload.type === 'view_submission' && payload.view.callback_id === 'request_changes') {
-    if (payload.user.id !== approver()) return new Response('');
+    if (!isApprover(payload.user.id)) return new Response('');
     const { pr, channel, ts } = JSON.parse(payload.view.private_metadata);
     const note = payload.view.state.values.note.note.value;
     await gh(`/issues/${pr}/comments`, { method: 'POST', body: { body: `🔁 **Changes requested in Slack by ${payload.user.name}:**\n\n> ${note.replace(/\n/g, '\n> ')}` } });

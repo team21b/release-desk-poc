@@ -1,6 +1,6 @@
 // Called by GitHub Actions after a PR deploys to the sandbox. Posts (or refreshes) the approval card.
 import { gh, findMarker, markerBody } from '../lib/github.js';
-import { slack, bearerOk } from '../lib/slack.js';
+import { slack, bearerOk, approvers, approverMentions } from '../lib/slack.js';
 import { buildCard } from '../lib/card.js';
 
 export async function POST(request) {
@@ -10,7 +10,6 @@ export async function POST(request) {
   const { pr, blocks, text } = await buildCard(number, { status: 'pending', screenshots });
   if (pr.state !== 'open') return Response.json({ skipped: 'PR not open' });
 
-  const approver = process.env.APPROVER_SLACK_ID;
   const marker = await findMarker(number);
   if (marker) {
     await slack('chat.update', { channel: marker.channel, ts: marker.ts, text, blocks });
@@ -21,15 +20,15 @@ export async function POST(request) {
     return Response.json({ ok: true, updated: true });
   }
 
-  const channel = process.env.REVIEW_CHANNEL || (await slack('conversations.open', { users: approver })).channel.id;
+  const channel = process.env.REVIEW_CHANNEL || (await slack('conversations.open', { users: approvers().join(',') })).channel.id;
   const posted = await slack('chat.postMessage', {
     channel, text, blocks: process.env.REVIEW_CHANNEL
-      ? [{ type: 'section', text: { type: 'mrkdwn', text: `<@${approver}> a change is ready for your review.` } }, ...blocks]
+      ? [{ type: 'section', text: { type: 'mrkdwn', text: `${approverMentions()} a change is ready for your review.` } }, ...blocks]
       : blocks,
   });
   await gh(`/issues/${number}/comments`, {
     method: 'POST',
-    body: { body: markerBody('🔔 Sent to the approver in Slack. This PR merges only from there.', { channel, ts: posted.ts }) },
+    body: { body: markerBody('🔔 Sent to the approvers in Slack. This PR merges only from there.', { channel, ts: posted.ts }) },
   });
   return Response.json({ ok: true, channel, ts: posted.ts });
 }
