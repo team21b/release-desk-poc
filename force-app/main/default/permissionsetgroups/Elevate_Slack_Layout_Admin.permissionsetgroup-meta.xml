@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSetGroup xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>ELEVATE: time-boxed only. Granted through Release Desk after approval in Slack, always with an expiry. Lets the holder manage Slack Record Layouts, which Salesforce gates behind Customize Application + Manage Users. Never assign permanently.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>ELEVATE | Slack Layout Admin</label>
+    <permissionSets>Capability_Admin_Console</permissionSets>
+    <permissionSets>Capability_Customize_Application</permissionSets>
+    <status>Updated</status>
+</PermissionSetGroup>

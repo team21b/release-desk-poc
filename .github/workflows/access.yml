@@ -1,0 +1,54 @@
+name: Access (time-boxed)
+
+# Grants and revokes ELEVATE permission set groups in production, with an expiry.
+# Runs only from main (Production environment) and only acts on a request signed by Release Desk
+# after an approver clicked Approve in Slack. The schedule is a backstop that removes expired grants.
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: Signed request (base64url JSON) — produced by Release Desk
+        required: true
+        type: string
+      signature:
+        description: HMAC of the payload — produced by Release Desk
+        required: true
+        type: string
+  schedule:
+    - cron: '*/15 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: access
+  cancel-in-progress: false
+
+jobs:
+  access:
+    name: ${{ github.event_name == 'schedule' && 'Sweep expired grants' || 'Grant / revoke' }}
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli@2 >/dev/null
+      - name: Authorize Production
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          printf '%s' "$SFDX_AUTH_URL" > "$RUNNER_TEMP/auth"
+          sf org login sfdx-url --sfdx-url-file "$RUNNER_TEMP/auth" --alias target >/dev/null
+          rm -f "$RUNNER_TEMP/auth"
+      - name: Apply
+        env:
+          MODE: ${{ github.event_name == 'schedule' && 'sweep' || 'apply' }}
+          PAYLOAD: ${{ inputs.payload }}
+          SIGNATURE: ${{ inputs.signature }}
+          ACCESS_SIGNING_KEY: ${{ secrets.ACCESS_SIGNING_KEY }}
+          RELEASE_DESK_URL: ${{ vars.RELEASE_DESK_URL }}
+          RELEASE_DESK_TOKEN: ${{ secrets.RELEASE_DESK_TOKEN }}
+        run: node scripts/access.mjs "$MODE"

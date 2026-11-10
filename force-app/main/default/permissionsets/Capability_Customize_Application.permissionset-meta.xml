@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Customize Application with its dependency closure (ViewSetup, ViewRoles, ManageCustomPermissions, ManageTranslation). Building block, never assigned directly.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>Capability | Customize Application</label>
+    <userPermissions><enabled>true</enabled><name>CustomizeApplication</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageCustomPermissions</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageTranslation</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ViewRoles</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ViewSetup</name></userPermissions>
+</PermissionSet>
