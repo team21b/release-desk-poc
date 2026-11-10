@@ -29,6 +29,7 @@ const STATUS = {
   changes: (s) => `🔁 Changes requested by <@${s.by}>${s.note ? `: _${s.note.slice(0, 300)}_` : ''}`,
   live: (s) => `🚀 *Live in ${ORG_LABELS.prod}*${s.runUrl ? ` · <${s.runUrl}|deploy log>` : ''}`,
   failed: (s) => `❌ Production deploy failed — nothing changed in ${ORG_LABELS.prod}.${s.runUrl ? ` <${s.runUrl}|See log>` : ''}`,
+  merged: (s) => `✅ Approved by <@${s.by}> — merged. No Salesforce changes, so nothing to deploy.`,
   closed: () => `⚪ This PR was closed or merged outside Release Desk.`,
 };
 
@@ -42,7 +43,7 @@ export async function buildCard(prNumber, state = { status: 'pending' }) {
   const risk = (section(pr.body, 'Risk').match(/- \[x\] .+/gi) || []).map((l) => '• ' + l.replace(/- \[x\] /i, ''));
   const rollback = section(pr.body, 'Rollback');
 
-  const titles = { pending: '🚦 Ready for your review', approved: '✅ Approved', changes: '🔁 Changes requested', live: '🚀 Shipped', failed: '❌ Deploy failed', closed: '⚪ Closed' };
+  const titles = { pending: '🚦 Ready for your review', approved: '✅ Approved', changes: '🔁 Changes requested', live: '🚀 Shipped', merged: '✅ Merged', failed: '❌ Deploy failed', closed: '⚪ Closed' };
   const blocks = [
     { type: 'header', text: { type: 'plain_text', text: titles[state.status] || titles.pending } },
     {

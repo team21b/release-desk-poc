@@ -29,9 +29,13 @@ async function approve({ pr, sha, channel, ts, user }) {
   } catch (e) {
     return thread(channel, ts, `❌ Couldn't merge: ${e.message}`);
   }
-  await gh(`/issues/${pr}/comments`, { method: 'POST', body: { body: `✅ Approved in Slack by **${user.name}** — merged; production deploy starting.` } });
-  await refresh(channel, ts, pr, { status: 'approved', by: user.id });
-  await thread(channel, ts, `✅ Approved by <@${user.id}>. Merged and deploying to production — I'll post here when it's live.`);
+  const files = await gh(`/pulls/${pr}/files?per_page=100`);
+  const deploys = files.some((f) => f.filename.startsWith('force-app/') || f.filename === 'sfdx-project.json');
+  await gh(`/issues/${pr}/comments`, { method: 'POST', body: { body: `✅ Approved in Slack by **${user.name}** — merged${deploys ? '; production deploy starting' : ' (no Salesforce changes)'}.` } });
+  await refresh(channel, ts, pr, { status: deploys ? 'approved' : 'merged', by: user.id });
+  await thread(channel, ts, deploys
+    ? `✅ Approved by <@${user.id}>. Merged and deploying to production — I'll post here when it's live.`
+    : `✅ Approved by <@${user.id}>. Merged — no Salesforce changes, so nothing goes to production.`);
 }
 
 const changesModal = (meta) => ({
