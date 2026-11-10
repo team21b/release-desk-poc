@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningExperienceTheme xmlns="http://soap.sforce.com/2006/04/metadata">
+    <defaultBrandingSet>LEXTHEMINGX21bLDS2bLDS2</defaultBrandingSet>
+    <designSystemVersion>SLDS_v2</designSystemVersion>
+    <isDarkModeEnabled>true</isDarkModeEnabled>
+    <masterLabel>21b LDS2</masterLabel>
+    <shouldOverrideLoadingImage>false</shouldOverrideLoadingImage>
+</LightningExperienceTheme>
