@@ -1,0 +1,24 @@
+# Create at https://api.slack.com/apps → Create New App → From a manifest → quest-test workspace.
+# Replace https://release-desk-poc.vercel.app with the deployed Release Desk URL first.
+display_information:
+  name: Release Desk
+  description: Review and approve Salesforce changes before they reach production.
+  background_color: "#1d2b3a"
+features:
+  bot_user:
+    display_name: Release Desk
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.public
+      - im:write
+      - mpim:write
+settings:
+  interactivity:
+    is_enabled: true
+    request_url: https://release-desk-poc.vercel.app/api/slack
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
