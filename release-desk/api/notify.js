@@ -25,7 +25,7 @@ export async function POST(request) {
 
   const channel = process.env.REVIEW_CHANNEL || (await slack('conversations.open', { users: approvers().join(',') })).channel.id;
   const posted = await slack('chat.postMessage', {
-    channel, text, metadata, blocks: process.env.REVIEW_CHANNEL
+    channel, text, metadata, unfurl_links: false, unfurl_media: false, blocks: process.env.REVIEW_CHANNEL
       ? [{ type: 'section', text: { type: 'mrkdwn', text: `${approverMentions()} a change is ready for your review.` } }, ...blocks]
       : blocks,
   });

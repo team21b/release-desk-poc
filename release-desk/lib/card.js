@@ -1,5 +1,5 @@
 // Builds the approval card from the PR itself: the PR template's sections + the changed components.
-import { gh, repoUrl } from './github.js';
+import { gh } from './github.js';
 
 const ORG_LABELS = { sandbox: process.env.SANDBOX_LABEL || '21B Dev 2', prod: process.env.PROD_LABEL || '21B Dev 1' };
 
@@ -49,7 +49,7 @@ export async function buildCard(prNumber, state = { status: 'pending' }) {
     { type: 'header', text: { type: 'plain_text', text: titles[state.status] || titles.pending } },
     {
       type: 'section',
-      text: { type: 'mrkdwn', text: `*<${pr.html_url}|#${pr.number} · ${pr.title}>*\nBuilt by *${pr.user.login}* · running now in *${ORG_LABELS.sandbox}* (sandbox)${state.status === 'pending' || state.status === 'changes' ? '\n👉 Open the *Release Desk* preview on this message for before/after screenshots.' : ''}` },
+      text: { type: 'mrkdwn', text: `*#${pr.number} · ${pr.title}*\nBuilt by *${pr.user.login}* · running now in *${ORG_LABELS.sandbox}* (sandbox)${state.status === 'pending' || state.status === 'changes' ? '\n👉 Open the *Release Desk* preview on this message for before/after screenshots.' : ''}` },
     },
     { type: 'section', text: { type: 'mrkdwn', text: `*What changed*\n${mrkdwn(what)}` } },
   ];
@@ -85,7 +85,7 @@ export async function buildCard(prNumber, state = { status: 'pending' }) {
     });
   }
   if (status) blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: status }] });
-  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Release Desk · <${repoUrl}|${repoUrl.replace('https://github.com/', '')}> · commit \`${pr.head.sha.slice(0, 7)}\`` }] });
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Release Desk · commit \`${pr.head.sha.slice(0, 7)}\`` }] });
 
   return { pr, blocks, text: `${titles[state.status] || titles.pending}: #${pr.number} ${pr.title}` };
 }
