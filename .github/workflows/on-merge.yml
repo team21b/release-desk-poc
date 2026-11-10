@@ -27,3 +27,20 @@ jobs:
     with:
       environment: Production
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+
+  report:
+    name: Report to Release Desk
+    needs: [production]
+    if: always() && github.event_name == 'push' && vars.RELEASE_DESK_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post deploy result to the Slack thread
+        env:
+          URL: ${{ vars.RELEASE_DESK_URL }}
+          TOKEN: ${{ secrets.RELEASE_DESK_TOKEN }}
+          RESULT: ${{ needs.production.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -fsS -X POST "$URL/api/deployed" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d "{\"sha\": \"$GITHUB_SHA\", \"result\": \"$RESULT\", \"run_url\": \"$RUN_URL\"}"
