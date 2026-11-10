@@ -12,10 +12,11 @@ const HEADERS = {
 };
 
 const esc = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const md = (s = '') => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>');
+const md = (s = '') => esc(s.replace(/\[(.+?)\]\((.+?)\)/g, '$1')).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n/g, '<br>');
 
 function section(body = '', heading) {
-  const clean = body.replace(/<!--[\s\S]*?-->/g, '');
+  // drop HTML comments and the PR attribution footer (it is for GitHub, not for the approver)
+  const clean = body.replace(/<!--[\s\S]*?-->/g, '').replace(/^.*Generated with \[?Claude Code.*$/gim, '');
   const m = clean.match(new RegExp(`##\\s*${heading}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|\\n---|$)`, 'i'));
   return m ? m[1].trim() : '';
 }

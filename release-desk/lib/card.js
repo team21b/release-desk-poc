@@ -4,12 +4,14 @@ import { gh } from './github.js';
 const ORG_LABELS = { sandbox: process.env.SANDBOX_LABEL || '21B Dev 2', prod: process.env.PROD_LABEL || '21B Dev 1' };
 
 function section(body = '', heading) {
-  const clean = body.replace(/<!--[\s\S]*?-->/g, '');
+  // drop HTML comments and the PR attribution footer (it is for GitHub, not for the approver)
+  const clean = body.replace(/<!--[\s\S]*?-->/g, '').replace(/^.*Generated with \[?Claude Code.*$/gim, '');
   const m = clean.match(new RegExp(`##\\s*${heading}[^\\n]*\\n([\\s\\S]*?)(?=\\n##\\s|\\n---|$)`, 'i'));
   return m ? m[1].trim() : '';
 }
 
-const mrkdwn = (s) => s.replace(/\*\*(.+?)\*\*/g, '*$1*').replace(/\[(.+?)\]\((.+?)\)/g, '<$2|$1>').slice(0, 2900);
+// Links in PR text become plain words: every link in a Slack message grows its own preview.
+const mrkdwn = (s) => s.replace(/\*\*(.+?)\*\*/g, '*$1*').replace(/\[(.+?)\]\((.+?)\)/g, '$1').replace(/https?:\/\/\S+/g, '').trim().slice(0, 2900);
 
 function component(path) {
   const m = path.match(/force-app\/main\/default\/(.+)$/);
