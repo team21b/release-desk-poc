@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Release Desk Demo</label>
+    <description>Grants access to the Release Desk POC demo fields.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>Account.Customer_Health__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+</PermissionSet>
