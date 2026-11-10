@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Customer_Health__c</fullName>
+    <label>Customer Health</label>
+    <description>Release Desk POC demo field: account health at a glance.</description>
+    <inlineHelpText>Green = healthy, Yellow = watch, Red = at risk.</inlineHelpText>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Green</fullName><default>false</default><label>Green</label><color>#2E844A</color></value>
+            <value><fullName>Yellow</fullName><default>false</default><label>Yellow</label><color>#FFB75D</color></value>
+            <value><fullName>Red</fullName><default>false</default><label>Red</label><color>#BA0517</color></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

@@ -1,0 +1,46 @@
+name: On merge to main
+
+# A merge to main is the approval. The Production environment only accepts jobs from main,
+# so this is the one path production credentials can be used from.
+on:
+  push:
+    branches: [main]
+    paths: ['force-app/**', 'sfdx-project.json']
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Validate only (no changes to production)
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  production:
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      environment: Production
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+
+  report:
+    name: Report to Release Desk
+    needs: [production]
+    if: always() && github.event_name == 'push' && vars.RELEASE_DESK_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post deploy result to the Slack thread
+        env:
+          URL: ${{ vars.RELEASE_DESK_URL }}
+          TOKEN: ${{ secrets.RELEASE_DESK_TOKEN }}
+          RESULT: ${{ needs.production.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          curl -fsS -X POST "$URL/api/deployed" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d "{\"sha\": \"$GITHUB_SHA\", \"result\": \"$RESULT\", \"run_url\": \"$RUN_URL\"}"
