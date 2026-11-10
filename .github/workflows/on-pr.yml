@@ -1,0 +1,23 @@
+name: On PR
+
+# Every PR deploys to the Sandbox org so the change can be seen (and, in step 3, captured) before approval.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sandbox
+  cancel-in-progress: false
+
+jobs:
+  sandbox:
+    if: github.event.pull_request.draft != true
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      environment: Sandbox
+      dry-run: false

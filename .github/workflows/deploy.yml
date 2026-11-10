@@ -1,0 +1,68 @@
+name: Deploy
+
+# Reusable deploy. The caller names the GitHub Environment; the org's SFDX auth URL comes from that
+# environment's SFDX_AUTH_URL secret. `dry-run: true` validates without changing the org.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string        # Sandbox | Production
+      dry-run:
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ inputs.dry-run && 'Validate' || 'Deploy' }} → ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Anything to deploy?
+        id: check
+        run: |
+          n=$(find force-app -type f ! -name .gitkeep | wc -l | tr -d ' ')
+          echo "Metadata files: $n"
+          echo "empty=$([ "$n" = 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.empty == 'false'
+        with:
+          node-version: 20
+
+      - name: Install Salesforce CLI
+        if: steps.check.outputs.empty == 'false'
+        run: npm install --global @salesforce/cli@2
+
+      - name: Authorize ${{ inputs.environment }}
+        if: steps.check.outputs.empty == 'false'
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          if [ -z "$SFDX_AUTH_URL" ]; then
+            echo "::error::SFDX_AUTH_URL is not set on environment '${{ inputs.environment }}'."
+            exit 1
+          fi
+          printf '%s' "$SFDX_AUTH_URL" > "$RUNNER_TEMP/auth"
+          sf org login sfdx-url --sfdx-url-file "$RUNNER_TEMP/auth" --alias target --set-default
+          rm -f "$RUNNER_TEMP/auth"
+
+      - name: ${{ inputs.dry-run && 'Validate' || 'Deploy' }}
+        if: steps.check.outputs.empty == 'false'
+        run: |
+          sf project deploy start \
+            --target-org target \
+            --source-dir force-app \
+            --test-level RunLocalTests \
+            ${{ inputs.dry-run && '--dry-run' || '' }} \
+            --wait 30 \
+            --verbose
+
+      - name: Nothing to deploy
+        if: steps.check.outputs.empty == 'true'
+        run: echo "::notice::force-app is empty — nothing to deploy."
