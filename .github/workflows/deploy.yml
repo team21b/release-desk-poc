@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Anything to deploy?
         id: check
@@ -30,9 +30,9 @@ jobs:
           echo "Metadata files: $n"
           echo "empty=$([ "$n" = 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli@2
