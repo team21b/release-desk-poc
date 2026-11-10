@@ -21,6 +21,11 @@ function appJwt() {
   return `${unsigned}.${sig}`;
 }
 
+// The app's installation on this repo, including the permissions it currently holds (no secrets).
+export async function appInstallation() {
+  return (await fetch(`${API}/repos/${OWNER}/${REPO}/installation`, { headers: { ...baseHeaders, Authorization: `Bearer ${appJwt()}` } })).json();
+}
+
 let cached;
 async function installationToken() {
   if (cached && cached.exp > Date.now() + 60_000) return cached.token;
