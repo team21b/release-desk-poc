@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Anything to deploy?
         id: check
@@ -30,17 +30,14 @@ jobs:
           echo "Metadata files: $n"
           echo "empty=$([ "$n" = 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-node@v4
-        if: steps.check.outputs.empty == 'false'
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Salesforce CLI
-        if: steps.check.outputs.empty == 'false'
         run: npm install --global @salesforce/cli@2
 
       - name: Authorize ${{ inputs.environment }}
-        if: steps.check.outputs.empty == 'false'
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
@@ -51,6 +48,7 @@ jobs:
           printf '%s' "$SFDX_AUTH_URL" > "$RUNNER_TEMP/auth"
           sf org login sfdx-url --sfdx-url-file "$RUNNER_TEMP/auth" --alias target --set-default
           rm -f "$RUNNER_TEMP/auth"
+          sf org display --target-org target | grep "Connected Status"
 
       - name: ${{ inputs.dry-run && 'Validate' || 'Deploy' }}
         if: steps.check.outputs.empty == 'false'
