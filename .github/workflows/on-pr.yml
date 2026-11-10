@@ -21,3 +21,19 @@ jobs:
     with:
       environment: Sandbox
       dry-run: false
+
+  notify:
+    name: Send to Release Desk
+    needs: [sandbox]
+    if: needs.sandbox.result == 'success' && vars.RELEASE_DESK_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post approval card to Slack
+        env:
+          URL: ${{ vars.RELEASE_DESK_URL }}
+          TOKEN: ${{ secrets.RELEASE_DESK_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          curl -fsS -X POST "$URL/api/notify" \
+            -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+            -d "{\"pr\": $PR}"
