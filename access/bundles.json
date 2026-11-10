@@ -1,0 +1,12 @@
+{
+  "_comment": "The ONLY access Release Desk can grant. Changing this file is itself a reviewed, approved PR.",
+  "bundles": [
+    {
+      "key": "slack-layout-admin",
+      "label": "Slack Layout Admin",
+      "permissionSetGroup": "Elevate_Slack_Layout_Admin",
+      "grants": "Customize Application + Manage Users — create and edit Slack Record Layouts",
+      "durations": [30, 60, 120, 240]
+    }
+  ]
+}
