@@ -1,8 +1,13 @@
 // Work Object metadata for a PR. The card carries it; clicking it opens the review page in Slack's side panel.
+import { baseUrl } from './review.js';
+
+// The entity URL must be on a domain in the app's Work Object allow list, so it points at Release Desk (which redirects to GitHub).
+export const entityUrl = (n) => `${baseUrl()}/api/pr?n=${n}`;
+
 export function entityFor(pr, previewUrl) {
   return {
     entity_type: 'slack#/entities/file',
-    url: pr.html_url,
+    url: entityUrl(pr.number),
     external_ref: { id: `pr-${pr.number}`, type: 'pull_request' },
     entity_payload: {
       attributes: {

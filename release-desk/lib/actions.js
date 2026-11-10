@@ -2,6 +2,7 @@
 import { gh, findMarker } from './github.js';
 import { slack } from './slack.js';
 import { buildCard } from './card.js';
+import { entityFor } from './entity.js';
 
 export const nameOf = (user) => {
   const map = Object.fromEntries((process.env.APPROVER_NAMES || '').split(',').map((p) => p.split(':').map((s) => s.trim())).filter((p) => p.length === 2));
@@ -16,8 +17,9 @@ async function where(pr, channel, ts) {
 
 async function refresh(loc, pr, state) {
   if (!loc.channel) return;
-  const { blocks, text } = await buildCard(pr, state);
-  await slack('chat.update', { channel: loc.channel, ts: loc.ts, text, blocks });
+  const { pr: live, blocks, text } = await buildCard(pr, state);
+  // keep the Work Object on the card when its status changes
+  await slack('chat.update', { channel: loc.channel, ts: loc.ts, text, blocks, metadata: JSON.stringify({ entities: [entityFor(live)] }) });
 }
 
 const thread = (loc, text) => (loc.channel ? slack('chat.postMessage', { channel: loc.channel, thread_ts: loc.ts, text }) : null);

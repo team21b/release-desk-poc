@@ -11,7 +11,8 @@ export async function POST(request) {
   const { pr, blocks, text } = await buildCard(number, { status: 'pending', screenshots });
   if (pr.state !== 'open') return Response.json({ skipped: 'PR not open' });
 
-  const metadata = { entities: [entityFor(pr)] };
+  // Slack only reads Work Object metadata when it arrives as a JSON string.
+  const metadata = JSON.stringify({ entities: [entityFor(pr)] });
   const marker = await findMarker(number);
   if (marker) {
     await slack('chat.update', { channel: marker.channel, ts: marker.ts, text, blocks, metadata });

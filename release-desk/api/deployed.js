@@ -2,6 +2,7 @@
 import { gh, findMarker } from '../lib/github.js';
 import { slack, bearerOk } from '../lib/slack.js';
 import { buildCard } from '../lib/card.js';
+import { entityFor } from '../lib/entity.js';
 
 export async function POST(request) {
   if (!bearerOk(request)) return new Response('unauthorized', { status: 401 });
@@ -14,8 +15,8 @@ export async function POST(request) {
   if (!marker) return Response.json({ skipped: 'PR never went through Release Desk' });
 
   const ok = result === 'success';
-  const { blocks, text } = await buildCard(pr.number, { status: ok ? 'live' : 'failed', runUrl });
-  await slack('chat.update', { channel: marker.channel, ts: marker.ts, text, blocks });
+  const { pr: live, blocks, text } = await buildCard(pr.number, { status: ok ? 'live' : 'failed', runUrl });
+  await slack('chat.update', { channel: marker.channel, ts: marker.ts, text, blocks, metadata: JSON.stringify({ entities: [entityFor(live)] }) });
   await slack('chat.postMessage', {
     channel: marker.channel, thread_ts: marker.ts,
     text: ok
