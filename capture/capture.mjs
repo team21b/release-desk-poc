@@ -19,6 +19,16 @@ await page.goto(new URL(path, page.url()).toString(), { waitUntil: 'domcontentlo
 await page.waitForLoadState('networkidle', { timeout: 60_000 }).catch(() => {});
 await page.locator('.slds-global-header, .appName, one-appnav').first().waitFor({ state: 'attached', timeout: 60_000 });
 await page.waitForTimeout(8000); // let console tabs + home components settle
+// A leftover theme *preview* overrides the org's active theme for this user only — end it so we capture what everyone sees.
+const endPreview = page.getByRole('link', { name: /end preview/i }).first();
+if (await endPreview.isVisible().catch(() => false)) {
+  await endPreview.click();
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(3000);
+  await page.goto(new URL(path, page.url()).toString(), { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(8000);
+  console.log('ended a theme preview first');
+}
 // close any "welcome"/setup assistant dialogs
 for (const sel of ['button[title="Close"]', 'button:has-text("Dismiss")', 'button:has-text("Got It")']) {
   const b = page.locator(`section[role="dialog"] ${sel}`).first();
