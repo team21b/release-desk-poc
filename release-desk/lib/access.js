@@ -21,8 +21,17 @@ export const selfApprovalAllowed = () => process.env.ACCESS_ALLOW_SELF_APPROVE =
 export const canApprove = (approverId, requesterId) => isApprover(approverId) && (approverId !== requesterId || selfApprovalAllowed());
 export const duration = (m) => (m < 60 ? `${m} minutes` : `${m / 60} hour${m === 60 ? '' : 's'}`);
 
+// Seal (AES-256-GCM) so the request is unreadable in the public Actions log; the HMAC still proves Release Desk sent it.
+function seal(obj) {
+  const key = crypto.createHash('sha256').update('release-desk/seal/v1:' + (process.env.ACCESS_SIGNING_KEY || '')).digest();
+  const iv = crypto.randomBytes(12);
+  const c = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const body = Buffer.concat([c.update(JSON.stringify(obj)), c.final()]);
+  return Buffer.concat([iv, body, c.getAuthTag()]).toString('base64url');
+}
+
 export async function dispatch(request) {
-  const payload = Buffer.from(JSON.stringify({ ...request, exp: Math.floor(Date.now() / 1000) + 600 })).toString('base64url');
+  const payload = seal({ ...request, exp: Math.floor(Date.now() / 1000) + 600 });
   const signature = crypto.createHmac('sha256', process.env.ACCESS_SIGNING_KEY || '').update(payload).digest('hex');
   await gh('/actions/workflows/access.yml/dispatches', { method: 'POST', body: { ref: 'main', inputs: { payload, signature } } });
 }
