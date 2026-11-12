@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       payload:
-        description: Signed request (base64url JSON) — produced by Release Desk
+        description: Sealed request (encrypted, base64url) — produced by Release Desk
         required: true
         type: string
       signature:
