@@ -8,9 +8,29 @@ import fs from 'node:fs';
 
 const mode = process.argv[2];
 const bundles = JSON.parse(fs.readFileSync('access/bundles.json', 'utf8')).bundles;
+// sf --json can exceed a pipe buffer and arrive cut off (a 971-error license refusal did), so parse defensively
+// and boil Salesforce's error list down to something a card can show.
+function sfError(raw) {
+  try {
+    const o = JSON.parse(raw || '');
+    const msgs = [...new Set((Array.isArray(o.data) ? o.data : []).map((x) => x.message).filter(Boolean))];
+    if (!msgs.length) return o.message || 'sf command failed';
+    const license = msgs.filter((m) => /user license doesn't allow the permission/i.test(m));
+    if (license.length === msgs.length)
+      return `this user's licence can't hold the bundle (${license.length} permissions refused, e.g. ${license.slice(0, 3).map((m) => m.split(': ').pop()).join(', ')})`;
+    return msgs.slice(0, 3).join('; ') + (msgs.length > 3 ? ` (+${msgs.length - 3} more)` : '');
+  } catch {
+    const lic = [...(raw || '').matchAll(/user license doesn't allow the permission: (\w+)/g)].map((x) => x[1]);
+    if (lic.length) return `this user's licence can't hold the bundle (${lic.length}+ permissions refused, e.g. ${lic.slice(0, 3).join(', ')})`;
+    const m = /"message":\s*"([^"]{1,300})"/.exec(raw || '');
+    return m ? m[1] : 'sf command failed (unreadable output)';
+  }
+}
 const sf = (args) => {
-  try { return JSON.parse(execFileSync('sf', [...args, '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })); }
-  catch (e) { const out = e.stdout ? JSON.parse(e.stdout) : {}; throw new Error(out.message || 'sf command failed'); }
+  let raw;
+  try { raw = execFileSync('sf', [...args, '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024 }); }
+  catch (e) { throw new Error(sfError(e.stdout)); }
+  return JSON.parse(raw);
 };
 const soql = (q) => sf(['data', 'query', '-o', 'target', '-q', q]).result.records;
 const safeId = (id) => { if (!/^[a-zA-Z0-9]{15,18}$/.test(id || '')) throw new Error('invalid record id'); return id; };
@@ -25,13 +45,24 @@ async function report(body) {
   }).catch(() => {});
 }
 
+// Requests arrive sealed (AES-256-GCM, key derived from ACCESS_SIGNING_KEY) so the public run log shows only
+// ciphertext — no Salesforce or Slack ids. Plain base64 JSON is still accepted during the switch-over.
+function unseal(payload) {
+  const raw = Buffer.from(payload, 'base64url');
+  if (raw[0] === 0x7b) return JSON.parse(raw.toString()); // legacy: plain JSON
+  const key = crypto.createHash('sha256').update('release-desk/seal/v1:' + process.env.ACCESS_SIGNING_KEY).digest();
+  const d = crypto.createDecipheriv('aes-256-gcm', key, raw.subarray(0, 12));
+  d.setAuthTag(raw.subarray(raw.length - 16));
+  return JSON.parse(Buffer.concat([d.update(raw.subarray(12, raw.length - 16)), d.final()]).toString());
+}
+
 function verify() {
   const payload = process.env.PAYLOAD || '';
   const sig = process.env.SIGNATURE || '';
   const want = crypto.createHmac('sha256', process.env.ACCESS_SIGNING_KEY || '').update(payload).digest('hex');
   if (!process.env.ACCESS_SIGNING_KEY || want.length !== sig.length || !crypto.timingSafeEqual(Buffer.from(want), Buffer.from(sig)))
     throw new Error('signature check failed — this request was not approved through Release Desk');
-  const p = JSON.parse(Buffer.from(payload, 'base64url').toString());
+  const p = unseal(payload);
   if (!(p.exp > Date.now() / 1000)) throw new Error('approval expired before it was used');
   return p;
 }
